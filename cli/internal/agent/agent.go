@@ -159,10 +159,11 @@ type geminiResponse struct {
 type Agent struct {
 	apiKey    string
 	sandbox   *api.Client
+	sandboxID string
 }
 
-func New(geminiAPIKey string, sandbox *api.Client) *Agent {
-	return &Agent{apiKey: geminiAPIKey, sandbox: sandbox}
+func New(geminiAPIKey string, sandbox *api.Client, sandboxID string) *Agent {
+	return &Agent{apiKey: geminiAPIKey, sandbox: sandbox, sandboxID: sandboxID}
 }
 
 func (a *Agent) Run(prompt string) error {
@@ -261,11 +262,13 @@ func (a *Agent) executeTool(name string, args map[string]any) (string, error) {
 		return ""
 	}
 
+	id := a.sandboxID
+
 	switch name {
 	case "create_file":
-		result, err = a.sandbox.WriteFile(str("path"), str("content"))
+		result, err = a.sandbox.WriteFile(id, str("path"), str("content"))
 	case "read_file":
-		result, err = a.sandbox.ReadFile(str("path"))
+		result, err = a.sandbox.ReadFile(id, str("path"))
 	case "list_files":
 		recursive := false
 		if v, ok := args["recursive"]; ok {
@@ -273,18 +276,18 @@ func (a *Agent) executeTool(name string, args map[string]any) (string, error) {
 				recursive = b
 			}
 		}
-		result, err = a.sandbox.ListFiles(str("path"), recursive)
+		result, err = a.sandbox.ListFiles(id, str("path"), recursive)
 	case "execute_command":
-		result, err = a.sandbox.Exec(str("command"), str("cwd"))
+		result, err = a.sandbox.Exec(id, str("command"), str("cwd"))
 	case "get_screenshot":
-		_, err = a.sandbox.Screenshot()
+		_, err = a.sandbox.Screenshot(id)
 		if err == nil {
 			result = map[string]string{"screenshot": "captured", "note": "Screenshot captured successfully."}
 		}
 	case "get_sandbox_status":
-		result, err = a.sandbox.Status()
+		result, err = a.sandbox.SandboxStatus(id)
 	case "create_xcode_project":
-		result, err = a.sandbox.CreateProject(str("name"))
+		result, err = a.sandbox.CreateProject(id, str("name"))
 	default:
 		return "", fmt.Errorf("unknown tool: %s", name)
 	}

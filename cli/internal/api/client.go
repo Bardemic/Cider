@@ -25,6 +25,15 @@ func New(baseURL string) *Client {
 
 // --- Response types ---
 
+type SandboxInfo struct {
+	ID        string `json:"id"`
+	UserID    string `json:"user_id,omitempty"`
+	VMName    string `json:"vm_name"`
+	IP        string `json:"ip,omitempty"`
+	Status    string `json:"status"`
+	CreatedAt string `json:"created_at"`
+}
+
 type SandboxStatus struct {
 	Platform         string      `json:"platform"`
 	MacOSVersion     string      `json:"macos_version"`
@@ -71,53 +80,91 @@ type ProjectResult struct {
 	Error string `json:"error,omitempty"`
 }
 
-// --- API methods ---
+// --- Sandbox lifecycle ---
 
-func (c *Client) Status() (*SandboxStatus, error) {
-	var s SandboxStatus
-	return &s, c.get("/status", &s)
+func (c *Client) CreateSandbox(repo string) (*SandboxInfo, error) {
+	body := map[string]any{}
+	if repo != "" {
+		body["repo"] = repo
+	}
+	var s SandboxInfo
+	return &s, c.post("/sandboxes", body, &s)
 }
 
-func (c *Client) Exec(command string, cwd string) (*ExecResult, error) {
+func (c *Client) ListSandboxes() ([]SandboxInfo, error) {
+	var s []SandboxInfo
+	return s, c.get("/sandboxes", &s)
+}
+
+func (c *Client) GetSandbox(id string) (*SandboxInfo, error) {
+	var s SandboxInfo
+	return &s, c.get(fmt.Sprintf("/sandboxes/%s", id), &s)
+}
+
+func (c *Client) DeleteSandbox(id string) error {
+	var r map[string]any
+	return c.del(fmt.Sprintf("/sandboxes/%s", id), &r)
+}
+
+// --- Per-sandbox operations (proxied to VM) ---
+
+func (c *Client) SandboxStatus(sandboxID string) (*SandboxStatus, error) {
+	var s SandboxStatus
+	return &s, c.get(fmt.Sprintf("/sandboxes/%s/status", sandboxID), &s)
+}
+
+func (c *Client) Exec(sandboxID, command string, cwd string) (*ExecResult, error) {
 	body := map[string]string{"command": command}
 	if cwd != "" {
 		body["cwd"] = cwd
 	}
 	var r ExecResult
-	return &r, c.post("/exec", body, &r)
+	return &r, c.post(fmt.Sprintf("/sandboxes/%s/exec", sandboxID), body, &r)
 }
 
-func (c *Client) WriteFile(path, content string) (*FileResult, error) {
+func (c *Client) WriteFile(sandboxID, path, content string) (*FileResult, error) {
 	var r FileResult
-	return &r, c.post("/files/write", map[string]string{"path": path, "content": content}, &r)
+	return &r, c.post(
+		fmt.Sprintf("/sandboxes/%s/files/write", sandboxID),
+		map[string]string{"path": path, "content": content}, &r,
+	)
 }
 
-func (c *Client) ReadFile(path string) (*FileResult, error) {
+func (c *Client) ReadFile(sandboxID, path string) (*FileResult, error) {
 	var r FileResult
-	return &r, c.post("/files/read", map[string]string{"path": path}, &r)
+	return &r, c.post(
+		fmt.Sprintf("/sandboxes/%s/files/read", sandboxID),
+		map[string]string{"path": path}, &r,
+	)
 }
 
-func (c *Client) ListFiles(path string, recursive bool) (*DirListing, error) {
+func (c *Client) ListFiles(sandboxID, path string, recursive bool) (*DirListing, error) {
 	var r DirListing
-	return &r, c.post("/files/list", map[string]any{"path": path, "recursive": recursive}, &r)
+	return &r, c.post(
+		fmt.Sprintf("/sandboxes/%s/files/list", sandboxID),
+		map[string]any{"path": path, "recursive": recursive}, &r,
+	)
 }
 
-func (c *Client) CreateProject(name string) (*ProjectResult, error) {
+func (c *Client) CreateProject(sandboxID, name string) (*ProjectResult, error) {
 	var r ProjectResult
-	return &r, c.post("/project/create", map[string]string{"name": name}, &r)
+	return &r, c.post(
+		fmt.Sprintf("/sandboxes/%s/project/create", sandboxID),
+		map[string]string{"name": name}, &r,
+	)
 }
 
-func (c *Client) BootSimulator(device string) (map[string]any, error) {
+func (c *Client) BootSimulator(sandboxID, device string) (map[string]any, error) {
 	body := map[string]any{}
 	if device != "" {
 		body["device_name"] = device
 	}
 	var r map[string]any
-	return r, c.post("/simulator/boot", body, &r)
+	return r, c.post(fmt.Sprintf("/sandboxes/%s/simulator/boot", sandboxID), body, &r)
 }
 
-func (c *Client) Screenshot() ([]byte, error) {
-	resp, err := c.HTTPClient.Get(c.BaseURL + "/screenshot")
+func (c *Client) Screenshot(sandboxID string) ([]byte, error) {
+	resp, err := c.HTTPClient.Get(c.BaseURL + fmt.Sprintf("/sandboxes/%s/screenshot", sandboxID))
 	if err != nil {
 		return nil, err
 	}
@@ -157,6 +204,26 @@ func (c *Client) post(endpoint string, body any, out any) error {
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	return json.NewDecoder(resp.Body).Decode(out)
+}
+
+func (c *Client) del(endpoint string, out any) error {
+	req, err := http.NewRequest(http.MethodDelete, c.BaseURL+endpoint, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
 	}
 
 	return json.NewDecoder(resp.Body).Decode(out)

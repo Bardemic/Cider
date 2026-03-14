@@ -26,10 +26,16 @@ func Execute() {
 	switch cmd {
 	case "create":
 		cmdCreate(cfg)
+	case "list", "ls":
+		cmdList(cfg)
+	case "stop", "delete":
+		if len(os.Args) < 3 {
+			ui.Fatal("Usage: cider stop <ID>")
+		}
+		cmdStop(cfg, os.Args[2])
 	case "login":
 		cmdLogin(cfg)
 	case "google":
-		// cider google login
 		if len(os.Args) >= 3 && os.Args[2] == "login" {
 			cmdGoogleLogin(cfg)
 		} else {
@@ -40,7 +46,7 @@ func Execute() {
 	case "help", "--help", "-h":
 		printUsage()
 	case "version", "--version", "-v":
-		fmt.Println("cider v0.1.0")
+		fmt.Println("cider v0.2.0")
 	default:
 		// Treat as sandbox ID: cider <ID> --emulator ios | --google
 		cmdSandboxAction(cfg, cmd)
@@ -57,51 +63,93 @@ func cmdCreate(cfg *config.Config) {
 
 	client := api.New(cfg.APIUrl)
 
-	fmt.Print("  Creating sandbox...")
-	status, err := client.Status()
-	if err != nil {
-		ui.Fatal(fmt.Sprintf("Cannot reach sandbox at %s: %s", cfg.APIUrl, err))
-	}
-	ui.ClearLine()
-	ui.Done("Connected to sandbox")
-
+	fmt.Println()
 	if repo != "" {
-		ui.KeyValue("Cloning", repo)
-		result, err := client.Exec(fmt.Sprintf("git clone %s project", repo), "")
-		if err != nil {
-			ui.Fatal(fmt.Sprintf("git clone failed: %s", err))
-		}
-		if result.ExitCode != 0 {
-			ui.Fatal(fmt.Sprintf("git clone failed: %s", result.Stderr))
-		}
-		ui.Done("Repo cloned")
+		fmt.Printf("  %s Creating sandbox with repo %s...\n", ui.Yellow+"⠋"+ui.Reset, ui.Dimmed(repo))
+	} else {
+		fmt.Printf("  %s Creating sandbox...\n", ui.Yellow+"⠋"+ui.Reset)
 	}
 
-	// Generate a short ID
-	sandboxID := fmt.Sprintf("sbx-%s", randomID(6))
-	cfg.ActiveSandbox = sandboxID
+	sandbox, err := client.CreateSandbox(repo)
+	if err != nil {
+		ui.Fatal(fmt.Sprintf("Failed to create sandbox: %s", err))
+	}
+
+	cfg.ActiveSandbox = sandbox.ID
 	cfg.Save()
 
+	ui.ClearLine()
+	ui.Done("Sandbox ready")
 	fmt.Println()
-	ui.KeyValue("ID", ui.Brand(sandboxID))
-	ui.KeyValue("macOS", status.MacOSVersion)
-	ui.KeyValue("Xcode", strings.Split(status.Xcode, "\n")[0])
-	ui.KeyValue("Project root", status.ProjectRoot)
-
-	sims := make([]string, len(status.BootedSimulators))
-	for i, s := range status.BootedSimulators {
-		sims[i] = s.Name
-	}
-	if len(sims) > 0 {
-		ui.KeyValue("Simulators", strings.Join(sims, ", "))
-	} else {
-		ui.KeyValue("Simulators", ui.Dimmed("none booted"))
-	}
+	ui.KeyValue("ID", ui.Brand(sandbox.ID))
+	ui.KeyValue("VM", sandbox.VMName)
+	ui.KeyValue("IP", sandbox.IP)
+	ui.KeyValue("Status", ui.Success(sandbox.Status))
 
 	fmt.Println()
 	fmt.Printf("  %s\n", ui.Dimmed("Next steps:"))
-	fmt.Printf("  %s\n", ui.Dimmed(fmt.Sprintf("  cider %s --emulator ios    # open iOS simulator", sandboxID)))
-	fmt.Printf("  %s\n", ui.Dimmed(fmt.Sprintf("  cider %s --google          # start Gemini agent", sandboxID)))
+	fmt.Printf("  %s\n", ui.Dimmed(fmt.Sprintf("  cider %s --emulator ios    # boot iOS simulator", sandbox.ID)))
+	fmt.Printf("  %s\n", ui.Dimmed(fmt.Sprintf("  cider %s --google          # start Gemini agent", sandbox.ID)))
+	fmt.Printf("  %s\n", ui.Dimmed(fmt.Sprintf("  cider stop %s              # stop and delete", sandbox.ID)))
+	fmt.Println()
+}
+
+func cmdList(cfg *config.Config) {
+	client := api.New(cfg.APIUrl)
+
+	sandboxes, err := client.ListSandboxes()
+	if err != nil {
+		ui.Fatal(fmt.Sprintf("Failed to list sandboxes: %s", err))
+	}
+
+	fmt.Println()
+	if len(sandboxes) == 0 {
+		fmt.Printf("  %s\n\n", ui.Dimmed("No sandboxes. Run: cider create"))
+		return
+	}
+
+	fmt.Printf("  %s%s%-14s %-22s %-16s %-10s %s%s\n",
+		ui.Bold, ui.Dim, "ID", "VM", "IP", "STATUS", "CREATED", ui.Reset)
+	for _, s := range sandboxes {
+		var statusColor string
+		switch s.Status {
+		case "running":
+			statusColor = ui.Success(s.Status)
+		case "creating":
+			statusColor = ui.Info(s.Status)
+		case "error":
+			statusColor = ui.Error(s.Status)
+		default:
+			statusColor = ui.Dimmed(s.Status)
+		}
+
+		ip := s.IP
+		if ip == "" {
+			ip = "-"
+		}
+		fmt.Printf("  %-14s %-22s %-16s %-10s %s\n",
+			ui.Brand(s.ID), s.VMName, ip, statusColor, ui.Dimmed(s.CreatedAt))
+	}
+	fmt.Println()
+}
+
+func cmdStop(cfg *config.Config, id string) {
+	client := api.New(cfg.APIUrl)
+
+	fmt.Printf("\n  Stopping sandbox %s...\n", ui.Brand(id))
+
+	err := client.DeleteSandbox(id)
+	if err != nil {
+		ui.Fatal(fmt.Sprintf("Failed to stop sandbox: %s", err))
+	}
+
+	// Clear active sandbox if it was this one
+	if cfg.ActiveSandbox == id {
+		cfg.ActiveSandbox = ""
+		cfg.Save()
+	}
+
+	ui.Done(fmt.Sprintf("Sandbox %s stopped and deleted", id))
 	fmt.Println()
 }
 
@@ -149,7 +197,6 @@ func cmdGoogleLogin(cfg *config.Config) {
 
 	fmt.Print("  Validating...")
 
-	// Quick validation — list models
 	resp, err := api.New("https://generativelanguage.googleapis.com/v1beta").HTTPClient.Get(
 		fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models?key=%s", key),
 	)
@@ -171,36 +218,35 @@ func cmdGoogleLogin(cfg *config.Config) {
 
 func cmdStatus(cfg *config.Config) {
 	client := api.New(cfg.APIUrl)
-	status, err := client.Status()
-	if err != nil {
-		ui.Fatal(fmt.Sprintf("Cannot reach sandbox at %s: %s", cfg.APIUrl, err))
-	}
 
 	ui.Banner()
-	ui.KeyValue("Sandbox", cfg.APIUrl)
-	ui.KeyValue("macOS", status.MacOSVersion)
-	ui.KeyValue("Xcode", strings.Split(status.Xcode, "\n")[0])
-	ui.KeyValue("Disk", status.Disk)
+	ui.KeyValue("Host", cfg.APIUrl)
 
-	if len(status.BootedSimulators) > 0 {
-		for _, s := range status.BootedSimulators {
-			ui.KeyValue("Simulator", fmt.Sprintf("%s (%s)", s.Name, s.UDID[:8]))
-		}
-	} else {
-		ui.KeyValue("Simulators", ui.Dimmed("none booted"))
+	// Try to reach the host server
+	sandboxes, err := client.ListSandboxes()
+	if err != nil {
+		fmt.Printf("  %s %s\n", ui.Error("✗"), fmt.Sprintf("Cannot reach host at %s", cfg.APIUrl))
+		fmt.Printf("  %s\n\n", ui.Dimmed(err.Error()))
+		return
 	}
+
+	ui.Done(fmt.Sprintf("Connected — %d sandbox(es)", len(sandboxes)))
 
 	if cfg.GeminiAPIKey != "" {
 		ui.KeyValue("Gemini", ui.Success("configured"))
 	} else {
 		ui.KeyValue("Gemini", ui.Dimmed("not configured — run: cider google login"))
 	}
+
+	if cfg.ActiveSandbox != "" {
+		ui.KeyValue("Active", ui.Brand(cfg.ActiveSandbox))
+	}
 	fmt.Println()
 }
 
 func cmdSandboxAction(cfg *config.Config, id string) {
 	if len(os.Args) < 3 {
-		fmt.Printf("  %s\n\n", ui.Dimmed("Usage: cider <ID> --emulator ios | --google"))
+		fmt.Printf("\n  %s\n\n", ui.Dimmed("Usage: cider <ID> --emulator ios | --google"))
 		return
 	}
 
@@ -211,14 +257,13 @@ func cmdSandboxAction(cfg *config.Config, id string) {
 	case "--emulator":
 		device := "iPhone 16"
 		if len(os.Args) >= 4 && os.Args[3] != "" {
-			// "ios" is the default, but accept a device name
 			if os.Args[3] != "ios" {
 				device = os.Args[3]
 			}
 		}
 
-		fmt.Printf("  Booting %s...\n", device)
-		result, err := client.BootSimulator(device)
+		fmt.Printf("\n  Booting %s in sandbox %s...\n", device, ui.Brand(id))
+		result, err := client.BootSimulator(id, device)
 		if err != nil {
 			ui.Fatal(fmt.Sprintf("Failed to boot simulator: %s", err))
 		}
@@ -238,6 +283,7 @@ func cmdSandboxAction(cfg *config.Config, id string) {
 		}
 
 		ui.Banner()
+		fmt.Printf("  %s %s\n", ui.Dimmed("Sandbox:"), ui.Brand(id))
 		fmt.Printf("  %s\n", ui.Dimmed("Type your prompt. The agent will build your iOS app."))
 		fmt.Printf("  %s\n\n", ui.Dimmed("Type 'exit' to quit."))
 
@@ -255,7 +301,7 @@ func cmdSandboxAction(cfg *config.Config, id string) {
 				return
 			}
 
-			a := agent.New(geminiKey, client)
+			a := agent.New(geminiKey, client, id)
 			if err := a.Run(prompt); err != nil {
 				fmt.Printf("\n  %s %s\n\n", ui.Error("✗"), err)
 			} else {
@@ -273,26 +319,14 @@ func printUsage() {
 	ui.Banner()
 	fmt.Println("  " + ui.Bold + "Usage:" + ui.Reset)
 	fmt.Println()
-	fmt.Println("    cider create                     Create a new sandbox")
-	fmt.Println("    cider create --repo <url>         Create sandbox with repo cloned")
-	fmt.Println("    cider status                     Check sandbox connection & info")
-	fmt.Println("    cider login                      Open dashboard login in browser")
-	fmt.Println("    cider google login               Authenticate with Gemini API key")
-	fmt.Println("    cider <ID> --emulator ios         Boot iOS simulator")
-	fmt.Println("    cider <ID> --google               Start Gemini agent CLI")
+	fmt.Println("    cider create                      Create a new sandbox (Tart VM)")
+	fmt.Println("    cider create --repo <url>          Create sandbox with repo cloned")
+	fmt.Println("    cider list                         List your sandboxes")
+	fmt.Println("    cider status                       Check host server connection")
+	fmt.Println("    cider login                        Open dashboard login in browser")
+	fmt.Println("    cider google login                 Authenticate with Gemini API key")
+	fmt.Println("    cider <ID> --emulator ios           Boot iOS simulator in sandbox")
+	fmt.Println("    cider <ID> --google                 Start Gemini agent session")
+	fmt.Println("    cider stop <ID>                    Stop and delete a sandbox")
 	fmt.Println()
-}
-
-func randomID(n int) string {
-	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-	b := make([]byte, n)
-	f, _ := os.Open("/dev/urandom")
-	if f != nil {
-		f.Read(b)
-		f.Close()
-	}
-	for i := range b {
-		b[i] = chars[int(b[i])%len(chars)]
-	}
-	return string(b)
 }
