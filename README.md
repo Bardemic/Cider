@@ -275,54 +275,210 @@ Each `cider create` clones a Tart VM from a pre-configured base image (macOS + X
 
 ### Pre-Demo Setup
 
-Do these in order. Total time: ~15 minutes.
+Three things need to happen: **(A)** Tart base image prepared, **(B)** Mac host server running, **(C)** Windows CLI ready. A only needs to happen once. B and C happen before the demo.
 
-#### Mac host (~10 min)
+---
+
+#### A. Prepare the Tart Base Image (one-time, ~30 min)
+
+This is the golden image every sandbox clones from. It needs macOS + Xcode + the Cider sandbox server auto-starting on boot. **Your teammate does this on the MacBook.**
+
+**If they already have a Tart VM with Xcode**, skip to step 4.
 
 ```bash
-# 1. Verify Tart base image exists
+# 1. Install Tart if not already installed
+brew install cirruslabs/cli/tart
+
+# 2. Pull a macOS base image (or use an existing one)
+tart clone ghcr.io/cirruslabs/macos-sequoia-xcode:latest cider-base
+# This is a ~30GB download. If they already have a VM with Xcode, clone from that instead:
+#   tart clone <existing-vm-name> cider-base
+
+# 3. Boot the base image to configure it
+tart run cider-base
+# This opens a macOS VM window. Log in and do the following inside the VM:
+```
+
+**Inside the VM (GUI or SSH — see step 3a for SSH):**
+
+```bash
+# 3a. (Optional) Enable SSH for easier setup
+#     In the VM's System Settings → General → Sharing → turn on "Remote Login"
+#     Then from the Mac host: ssh admin@$(tart ip cider-base)
+
+# 4. Verify Xcode works
+xcodebuild -version
+# Should print "Xcode 16.x" — if not, install Xcode from the App Store or xcode-select
+
+# 5. Accept Xcode license (required for xcodebuild to work)
+sudo xcodebuild -license accept
+
+# 6. Install Python (for the sandbox server)
+#    If python3 isn't available:
+xcode-select --install          # gives you python3 via CommandLineTools
+#    Or: brew install python    # if homebrew is available in the VM
+
+# 7. Copy the Cider sandbox server into the VM
+#    From the Mac HOST (not inside the VM), run:
+#    scp -r server/ admin@$(tart ip cider-base):~/cider-server/
+#
+#    Or, inside the VM, clone the repo:
+git clone https://github.com/Bardemic/Cider.git ~/cider-repo
+cp -r ~/cider-repo/server ~/cider-server
+
+# 8. Install Python dependencies inside the VM
+cd ~/cider-server
+pip3 install -r requirements.txt
+
+# 9. Test that the server starts
+python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 &
+curl http://localhost:8000/status
+# Should return JSON with macos_version, xcode info, etc.
+# Kill the test server: kill %1
+
+# 10. Set up the sandbox server to auto-start on boot
+#     Create a LaunchAgent plist:
+mkdir -p ~/Library/LaunchAgents
+
+cat > ~/Library/LaunchAgents/com.cider.sandbox.plist << 'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.cider.sandbox</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>-m</string>
+        <string>uvicorn</string>
+        <string>main:app</string>
+        <string>--host</string>
+        <string>0.0.0.0</string>
+        <string>--port</string>
+        <string>8000</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/admin/cider-server</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/cider-sandbox.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/cider-sandbox.err</string>
+</dict>
+</plist>
+PLIST
+
+# Load it now to verify
+launchctl load ~/Library/LaunchAgents/com.cider.sandbox.plist
+sleep 3
+curl http://localhost:8000/status
+# Should work. If not, check /tmp/cider-sandbox.err
+
+# 11. Create the Xcode template project
+mkdir -p ~/CiderTemplate
+# Open Xcode (inside the VM):
+#   File → New → Project → iOS → App
+#   Product Name: CiderTemplate
+#   Interface: SwiftUI
+#   Language: Swift
+#   Save to: ~/CiderTemplate
+#
+# Or from command line if you have a template ready:
+#   The template just needs to be a valid SwiftUI project at ~/CiderTemplate/
+
+# 12. Shut down the VM cleanly (this saves the state into the image)
+sudo shutdown -h now
+```
+
+**Back on the Mac host:**
+
+```bash
+# 13. Verify the base image is ready
 tart list
 # Should show "cider-base"
 
-# 2. Start the host server
-cd server
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000 &
+# 14. Test a full clone-boot-verify cycle
+tart clone cider-base cider-test
+tart run cider-test --no-graphics &
+sleep 45
 
-# 3. Test sandbox lifecycle end-to-end
-curl -X POST http://localhost:8000/sandboxes
-# Should return sandbox JSON with status "running" — note the ID
+# Get the VM's IP
+tart ip cider-test
+# Should print something like 192.168.64.X
 
-curl -X POST http://localhost:8000/sandboxes/<ID>/exec \
+# Verify the sandbox server auto-started
+curl http://$(tart ip cider-test):8000/status
+# Should return JSON with xcode info
+
+# Verify xcodebuild works
+curl -X POST http://$(tart ip cider-test):8000/exec \
   -H "Content-Type: application/json" \
   -d '{"command": "xcodebuild -version"}'
-# Should return Xcode version — this proves the full pipeline works
+# Should return Xcode version in stdout
 
-curl -X DELETE http://localhost:8000/sandboxes/<ID>
 # Clean up
+tart stop cider-test && tart delete cider-test
+```
 
-# 4. Note your Tailscale IP
+**If step 14 works, the base image is ready. This never needs to be done again.**
+
+---
+
+#### B. Mac Host — Start Before Demo (~2 min)
+
+```bash
+# 1. Start the host server
+cd server
+pip install -r requirements.txt   # skip if already done
+uvicorn main:app --host 0.0.0.0 --port 8000
+
+# 2. Verify it's running
+curl http://localhost:8000/sandboxes
+# Should return [] (empty list)
+
+# 3. Note your Tailscale IP (give this to the Windows laptop)
 tailscale ip -4
 ```
 
-#### Windows client (~5 min)
+#### C. Windows Client — Start Before Demo (~3 min)
 
 ```bash
-# 1. Build CLI + set host URL
-cd cli && go build -o cider.exe .
+# 1. Build the CLI (skip if already built)
+cd cli
+go build -o cider.exe .
+
+# 2. Set the host URL
 export CIDER_API_URL=http://<mac-tailscale-ip>:8000
 
-# 2. Verify connectivity
+# 3. Verify connectivity to the Mac
 ./cider.exe status
-# Should show "Connected"
+# Should show "Connected — 0 sandbox(es)"
 
-# 3. Save Gemini key
+# 4. Save Gemini API key (skip if already saved)
 ./cider.exe google login
 
-# 4. Pre-create a sandbox (safety net — use this if live create is slow)
+# 5. IMPORTANT: Pre-create a fallback sandbox
 ./cider.exe create
-# Note the ID. Leave it running as your fallback.
+# Note the ID. Leave it running. If live `cider create` is slow during
+# the demo, use this one instead. You can always say "we already have
+# a sandbox ready" and skip straight to --emulator / --google.
 ```
+
+#### Pre-Demo Verification Checklist
+
+Run through this right before presenting. Every line should pass.
+
+| Check | Command (Windows) | Expected |
+|---|---|---|
+| CLI built | `./cider.exe version` | `cider v0.2.0` |
+| Host reachable | `./cider.exe status` | "Connected" |
+| Gemini configured | `./cider.exe status` | Shows "Gemini: configured" |
+| Fallback sandbox running | `./cider.exe list` | Shows 1 sandbox, status "running" |
+| Sandbox responds | `./cider.exe <fallback-ID> --emulator ios` | "iPhone 16 booted" or "already running" |
 
 ### Demo Script (5-7 minutes)
 
