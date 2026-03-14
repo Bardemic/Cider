@@ -10,7 +10,7 @@
   },
   "homepage": "https://github.com/Bardemic/Cider#readme",
   "bin": {
-    "cider": "./dist/index.js"
+    "cider": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",

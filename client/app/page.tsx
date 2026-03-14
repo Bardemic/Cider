@@ -130,6 +130,22 @@ export default function Home() {
           </p>
         </div>
       </section>
+
+      {/* "Sponsored" badge */}
+      <div className="mt-20 flex justify-center pb-10">
+        <div className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-5 py-2.5 opacity-80 hover:opacity-100 transition-opacity">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
+            <path d="M12 2L8.5 8.5 2 12l6.5 3.5L12 22l3.5-6.5L22 12l-6.5-3.5z" fill="#4285F4"/>
+            <path d="M12 2L8.5 8.5 2 12l6.5 3.5L12 22" fill="#34A853"/>
+            <path d="M12 2l3.5 6.5L22 12l-6.5 3.5L12 22" fill="#FBBC04"/>
+            <path d="M12 7l-2.5 5L12 17l2.5-5z" fill="#EA4335"/>
+          </svg>
+          <span className="text-sm font-medium tracking-wide">
+            <span style={{ fontSize: '3px', verticalAlign: 'super' }}>not </span>
+            Sponsored by Gemini
+          </span>
+        </div>
+      </div>
     </main>
   );
 }
