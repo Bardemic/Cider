@@ -81,15 +81,6 @@ textarea {
   padding: 24px 24px 80px;
 }
 
-.site-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 0 20px;
-  border-bottom: 1px solid var(--border);
-}
-
 .surface-card {
   border: 1px solid var(--border);
   background: #ffffff;
@@ -292,25 +283,8 @@ textarea {
   background: rgba(199, 70, 47, 0.06);
 }
 
-.dashboard-grid {
-  display: grid;
-  gap: 32px;
-}
-
-@media (min-width: 1024px) {
-  .dashboard-grid {
-    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
-  }
-}
-
 @media (max-width: 720px) {
   .page-shell {
     padding: 18px 16px 56px;
-  }
-
-  .site-nav {
-    flex-direction: column;
-    align-items: flex-start;
-    padding-bottom: 16px;
   }
 }
