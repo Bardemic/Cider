@@ -364,6 +364,56 @@ An AI coding agent (Claude Code, Codex, Gemini CLI) receives a task: "Build me a
 
 ---
 
+### The Case Against (Steelman)
+
+#### 1. Apple Controls the Chokepoint — and They Might Just Do This Themselves
+Apple shipped MCP support in Xcode 26.3. They're clearly watching the AI agent space. If cloud macOS sandboxes for agents become valuable, Apple could offer "Xcode Cloud for Agents" as a first-party service tomorrow. They already have Xcode Cloud (CI/CD), the hardware, the OS, and the developer relationships. You'd be building a business where your most existential competitor owns the operating system, the IDE, the hardware, and the licensing terms. Every Apple WWDC keynote is an extinction-level event for you.
+
+#### 2. The Licensing Economics May Never Work
+Apple's 24-hour minimum lease requirement isn't a technical constraint — it's a business decision Apple can change (or make worse) at any time. At ~$26/day minimum cost per environment, the unit economics are fundamentally different from Linux sandboxes (pennies per session). This means:
+- You can't compete on price with E2B/Sprites for the 90% of agent tasks that don't need macOS
+- Your margins are squeezed between Apple's hardware costs and what developers will pay
+- Apple could tighten licensing terms at any time (they've done it before with Hackintosh, virtualization rules, etc.)
+
+#### 3. The Market May Be Smaller Than It Looks
+The TAM analysis assumes millions of developers want AI agents building Swift apps in the cloud. But:
+- **Most iOS developers already own Macs** — that's a prerequisite for the job. The "developer who doesn't own a Mac but wants to build iOS apps" is a niche, not a market.
+- **AI agents don't need persistent GUI environments for most coding tasks.** Claude Code and Codex work via terminal/file operations. You need macOS specifically for *compilation and testing*, which is a fraction of the agent's workflow. An agent could write Swift code on Linux and only use a Mac sandbox for build/test — reducing usage (and revenue) dramatically.
+- **Cross-platform frameworks are eating native Swift.** Flutter, React Native, Kotlin Multiplatform, and now AI-generated cross-platform code reduce the share of developers who *must* use Xcode. The trend line is moving away from platform-specific tooling.
+
+#### 4. Daytona and Cua Are Already Here
+Daytona has $24M, claims macOS support, and is purpose-built for AI agent sandboxes. Cua is YC-backed and macOS-native. If this market takes off, they have:
+- 12-18 month head starts
+- Existing infrastructure and customers
+- Established relationships with cloud providers and Apple
+- Engineering teams already solving the hard virtualization problems
+
+You'd be entering a market where well-funded incumbents are already building the exact product. The "nobody does this yet" gap is closing fast.
+
+#### 5. The Technical Moat Is Thin
+The underlying tech is commoditized or open source:
+- Apple's Virtualization.framework is free and public
+- Tart/Orchard (open source) already orchestrate macOS VMs at scale
+- Xcode's MCP support is a standard protocol — no proprietary integration needed
+- Any cloud provider with Mac hardware can replicate the stack
+
+There's no proprietary model, no unique dataset, no network effect. The value is in operational excellence (uptime, boot speed, developer experience) — which is important but not defensible against bigger players with more capital.
+
+#### 6. AI Agents Might Not Need Full macOS Environments
+The assumption is that agents need a full macOS environment with Xcode. But:
+- **Swift compiles on Linux** (Swift is open source and cross-platform). You can compile, test, and run Swift packages on Linux today. Only UIKit/SwiftUI apps strictly require macOS.
+- **AI agents could generate Xcode projects and push to a lightweight CI** for build/test, rather than needing a persistent interactive macOS environment.
+- **Apple's vision may be local-first.** Xcode 26.3's MCP support is designed for local Mac use. Apple may actively resist cloud Xcode environments to protect hardware sales — their business model depends on developers buying Macs.
+
+#### 7. The "Education" Angle Is Overstated
+"Students can't afford Macs" sounds compelling, but:
+- Most CS programs have Mac labs or loaner programs
+- Students learning Swift are typically already in the Apple ecosystem
+- The serious alternative for budget-conscious students is to learn web/mobile dev with cross-platform tools, not to pay $50/mo for a cloud Mac
+- Apple already offers steep education discounts and the Swift Playgrounds app on iPad ($349)
+
+---
+
 ### Hackathon Fit Assessment
 
 #### Arguments For
