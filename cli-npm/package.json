@@ -1,0 +1,31 @@
+{
+  "name": "cider-cli",
+  "version": "0.2.0",
+  "description": "Brew iOS apps in the cloud — macOS sandboxes for AI agents",
+  "type": "module",
+  "bin": {
+    "cider": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "tsc"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "ios",
+    "xcode",
+    "macos",
+    "sandbox",
+    "ai",
+    "gemini",
+    "cli"
+  ],
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  }
+}
