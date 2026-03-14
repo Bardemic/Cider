@@ -27,11 +27,11 @@ const sections = [
 export default function Home() {
   return (
     <main className="page-shell">
-      <section className="grid items-start gap-14 pt-16 lg:grid-cols-[minmax(0,1fr)_minmax(420px,470px)]">
+      <section className="grid items-start gap-16 pt-24 lg:grid-cols-[minmax(0,1fr)_minmax(440px,520px)]">
         <div>
           <div className="flex items-center gap-3">
             <CiderIcon size={28} />
-            <span className="eyebrow">Craft iOS apps in the cloud</span>
+            <span className="eyebrow">macOS sandboxes for AI agents</span>
           </div>
           <h1 className="hero-title mt-6 max-w-3xl">Let agents build iOS apps from any machine.</h1>
           <p className="body-copy mt-6 max-w-xl text-lg">
@@ -83,7 +83,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mt-24 grid items-start gap-14 border-t border-[var(--border)] pt-16 lg:grid-cols-[minmax(0,0.8fr)_minmax(420px,1.2fr)]">
+      <section className="mt-28 grid items-start gap-16 border-t border-[var(--border)] pt-20 lg:grid-cols-[minmax(0,0.8fr)_minmax(440px,1.2fr)]">
         <div>
           <div className="data-label">How it works</div>
           <h2 className="section-title mt-4 max-w-lg">
@@ -115,22 +115,22 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mt-20 grid gap-10 border-t border-[var(--border)] pt-10 md:grid-cols-3">
+      <section className="mt-24 grid gap-12 border-t border-[var(--border)] pt-14 md:grid-cols-3">
         <div>
           <div className="data-label">Provision</div>
-          <p className="body-copy mt-3">
+          <p className="body-copy mt-4 text-[1.05rem]">
             `cider create` can start clean or initialize from a repo URL without any extra web flow.
           </p>
         </div>
         <div>
           <div className="data-label">Build</div>
-          <p className="body-copy mt-3">
+          <p className="body-copy mt-4 text-[1.05rem]">
             Use the sandbox to compile Swift, boot the simulator, and iterate on the app from the CLI.
           </p>
         </div>
         <div>
           <div className="data-label">Cleanup</div>
-          <p className="body-copy mt-3">
+          <p className="body-copy mt-4 text-[1.05rem]">
             Destroy the VM when you are finished and return to a clean base image for the next run.
           </p>
         </div>
