@@ -9,10 +9,11 @@ logger = logging.getLogger("cider.tart")
 _running_vms: dict[str, asyncio.subprocess.Process] = {}
 
 
-async def create_vm(sandbox_id: str) -> str:
-    """Clone base image, boot VM, wait for server, return IP."""
-    vm_name = f"cider-{sandbox_id}"
+async def clone_and_boot(vm_name: str) -> str:
+    """Clone base image, boot VM, wait for server ready. Returns IP.
 
+    Used by create_vm and the warm pool.
+    """
     # Clone from base image
     logger.info(f"Cloning {TART_BASE_IMAGE} → {vm_name}")
     proc = await asyncio.create_subprocess_exec(
@@ -42,6 +43,11 @@ async def create_vm(sandbox_id: str) -> str:
     logger.info(f"VM {vm_name} server ready at {ip}:8000")
 
     return ip
+
+
+async def create_vm(sandbox_id: str) -> str:
+    """Clone base image, boot VM, wait for server, return IP."""
+    return await clone_and_boot(f"cider-{sandbox_id}")
 
 
 async def stop_vm(vm_name: str):

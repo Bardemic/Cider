@@ -33,7 +33,7 @@ export default function Home() {
             <CiderIcon size={28} />
             <span className="eyebrow">Brew iOS apps in the cloud</span>
           </div>
-          <h1 className="hero-title mt-6 max-w-3xl">Build iOS apps from any machine.</h1>
+          <h1 className="hero-title mt-6 max-w-3xl">Let agents build iOS apps from any machine.</h1>
           <p className="body-copy mt-6 max-w-xl text-lg">
             Spin up a macOS sandbox, build and run iOS apps in a remote simulator,
             and ship without needing a Mac on your desk.
