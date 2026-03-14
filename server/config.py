@@ -16,3 +16,8 @@ SIMULATOR_DEVICE = os.environ.get("CIDER_SIMULATOR_DEVICE", "iPhone 16")
 # Server host/port
 HOST = os.environ.get("CIDER_HOST", "0.0.0.0")
 PORT = int(os.environ.get("CIDER_PORT", "8000"))
+
+# Tart VM management (host server only)
+TART_BASE_IMAGE = os.environ.get("CIDER_TART_BASE_IMAGE", "cider-base")
+DB_PATH = Path(os.environ.get("CIDER_DB_PATH", Path.home() / ".cider" / "cider.db"))
+VM_BOOT_TIMEOUT = int(os.environ.get("CIDER_VM_BOOT_TIMEOUT", "120"))
