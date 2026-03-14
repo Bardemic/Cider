@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cider-bg: #0a0a0f;
+  --color-cider-surface: #12121a;
+  --color-cider-border: #1e1e2e;
+  --color-cider-accent: #f97316;
+  --color-cider-accent-dim: #c2410c;
+  --color-cider-text: #e4e4e7;
+  --color-cider-text-dim: #71717a;
+  --color-cider-green: #22c55e;
+  --color-cider-red: #ef4444;
+  --color-cider-terminal: #1a1a2e;
+  --font-mono: "JetBrains Mono", "Fira Code", "SF Mono", ui-monospace, monospace;
+}
+
+body {
+  background: var(--color-cider-bg);
+  color: var(--color-cider-text);
+  font-family: var(--font-mono);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-cider-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-cider-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-cider-text-dim);
+}
+
+/* Terminal-style text */
+.terminal-text {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Glow effect for accent elements */
+.glow-orange {
+  box-shadow: 0 0 20px rgba(249, 115, 22, 0.15);
+}
+
+/* iPhone frame */
+.iphone-frame {
+  border-radius: 40px;
+  border: 4px solid #2a2a3a;
+  overflow: hidden;
+  box-shadow: 0 0 0 2px #1a1a2a, 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+/* Pulse animation for status dot */
+@keyframes pulse-green {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.pulse-green {
+  animation: pulse-green 2s ease-in-out infinite;
+}
+
+/* Fade in animation */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+  animation: fade-in 0.3s ease-out;
+}
