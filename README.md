@@ -711,6 +711,99 @@ npm install && npm run dev
 
 ---
 
+## Why Sandboxes, Why Now
+
+Sandboxes have become the defining infrastructure pattern of AI-era development. Since early 2025, every major AI coding tool has converged on the same insight: **agents need isolated environments to execute code, not just generate it.**
+
+- **Anthropic** launched Claude Code with built-in sandboxed execution — the agent writes code and runs it in an isolated container to verify it works before presenting it to the user.
+- **OpenAI** shipped Codex with cloud sandboxes — each task runs in a microVM with full filesystem and network access.
+- **E2B** raised $44M specifically to build "sandboxes for AI agents" — isolated cloud environments where agents can execute arbitrary code safely.
+- **Modal, Fly.io, and Firecracker** all saw surges in adoption as AI agents needed somewhere to run the code they generate.
+
+The pattern is clear: AI can write code, but code that isn't executed is just a suggestion. Sandboxes turn suggestions into verified, running software.
+
+**But there's a gap.** Every sandbox product today supports Linux containers. None of them support macOS. You can spin up a sandbox to build a Python API or a React app in seconds — but if you want to build an iOS app, you're stuck. Xcode requires macOS. macOS requires Apple hardware. Apple hardware requires a $600+ purchase.
+
+Cider fills the macOS-shaped hole in the sandbox ecosystem. Same pattern — isolated environment, API-driven, agent-friendly — but for the one platform that every other sandbox product can't touch.
+
+---
+
+## Scaling Beyond Peer-to-Peer
+
+The current MVP is peer-to-peer: one Mac host, one CLI client, connected via ngrok or Tailscale. This is fine for a demo and for small teams. Here's how Cider would scale to a real multi-tenant service.
+
+### Phase 1: Dedicated Mac Infrastructure
+
+Replace the single MacBook with dedicated Mac hardware in a data center.
+
+| Component | MVP (now) | Scale |
+|---|---|---|
+| Hardware | One teammate's MacBook | Mac Minis in a colo (e.g., MacStadium, AWS EC2 Mac) |
+| Networking | Ngrok tunnel / Tailscale | Direct public IP with TLS termination |
+| VMs per host | 2-3 (limited by MacBook RAM) | 8-16 per Mac Mini (64GB M4 Pro) |
+| VM manager | Single Tart process | Orchestrator assigning VMs across a pool of Mac hosts |
+
+**Why Mac Minis:** $599 base, Apple Silicon, runs Tart natively. A rack of 10 Mac Minis at a colo costs ~$500/month and serves 80-160 concurrent sandboxes.
+
+### Phase 2: Multi-Host Orchestration
+
+The host server becomes a control plane that manages a fleet of Macs.
+
+```
+                         ┌─────────────────────┐
+                         │  Control Plane API   │
+                         │  (any cloud)         │
+                         │                      │
+                         │  - User auth         │
+                         │  - Sandbox scheduler │
+                         │  - Billing / quotas  │
+                         └──────────┬───────────┘
+                                    │
+                    ┌───────────────┼───────────────┐
+                    │               │               │
+             ┌──────▼──────┐ ┌─────▼───────┐ ┌─────▼───────┐
+             │  Mac Host 1 │ │  Mac Host 2 │ │  Mac Host N │
+             │  8 Tart VMs │ │  8 Tart VMs │ │  8 Tart VMs │
+             └─────────────┘ └─────────────┘ └─────────────┘
+```
+
+**Scheduler logic:** When `cider create` is called, the control plane picks the Mac host with the most available capacity, provisions a VM there, and returns the sandbox ID. The proxy layer routes all subsequent requests to the correct host.
+
+### Phase 3: Production Features
+
+| Feature | Implementation |
+|---|---|
+| **Auth** | better-auth on the web dashboard, OAuth tokens for CLI, API keys for agents |
+| **Billing** | Per-minute sandbox usage. Free tier: 30 min/month. Pro: $20/month for 10 hours. |
+| **Sandbox expiration** | Auto-stop after 30 min idle. Auto-delete after 24 hours. Configurable per plan. |
+| **Persistent storage** | Mount a persistent volume for project files that survives sandbox restarts |
+| **Custom base images** | Users upload their own Xcode projects, dependencies, and configs as a custom base image |
+| **App Store submission** | Integrate code signing and `xcrun altool` for direct App Store uploads from the sandbox |
+| **CI/CD integration** | GitHub Actions / GitLab CI runner that provisions a Cider sandbox for iOS builds |
+| **Multi-platform** | Extend beyond iOS: macOS apps, watchOS, visionOS — all require Xcode |
+
+### Phase 4: The Platform Play
+
+At scale, Cider becomes the default build backend for every AI coding agent that wants to target Apple platforms.
+
+```
+Cursor / Claude Code / Copilot / Custom Agent
+    │
+    │  "Build an iOS app"
+    │
+    ▼
+Cider API: POST /sandboxes → sandbox ready in 30s
+    │
+    │  write files, xcodebuild, simctl, screenshot
+    │
+    ▼
+App compiled, tested, and ready to submit
+```
+
+The moat: **Apple hardware is a physical constraint.** You can't virtualize macOS on Linux (legally). You can't run Xcode in a container. Every iOS build in the world requires Apple silicon. Cider aggregates that hardware and exposes it as an API.
+
+---
+
 ## The Bigger Picture
 
 Cloud Mac services already exist (MacStadium, MacinCloud, AWS EC2 Mac). Their entire business model validates the premise: developers need Mac access but don't own Macs.
