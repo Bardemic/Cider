@@ -62,51 +62,20 @@ Prompts for a Gemini API key. Get one at https://aistudio.google.com/apikey
 
 The Cider CLI needs to reach a Cider host server running on a Mac. Set the `CIDER_API_URL` environment variable before using any commands.
 
-### Option 1: Ngrok (recommended for demos / remote)
+### Connecting
 
-The Mac host exposes the server via ngrok. You get an HTTPS URL like `https://xxxx-xx-xxx-xx-xxx.ngrok-free.app`.
+The Cider host server is exposed via ngrok:
 
 ```bash
 export CIDER_API_URL=https://2bc6-50-171-72-195.ngrok-free.app
 cider status   # verify "Connected"
 ```
 
-On the Mac host side, the operator runs:
-```bash
-ngrok http 8000
-```
-This tunnels the local FastAPI server to a public URL.
-
-### Option 2: Tailscale (peer-to-peer VPN)
-
-Both machines join the same Tailscale network. The Mac's Tailscale IP is used directly.
-
-```bash
-export CIDER_API_URL=http://<tailscale-ip>:8000
-cider status
-```
-
-### Option 3: Local (same machine)
-
-If running everything on the Mac itself:
-```bash
-export CIDER_API_URL=http://localhost:8000
-```
-
-### Verifying the connection
-
-Always run `cider status` after setting `CIDER_API_URL`. You should see:
-```
-  ✓ Connected — 0 sandbox(es)
-```
-
-If it fails, the host server isn't reachable — check the URL, check that the server is running, and check network/firewall settings.
-
 ## Typical Workflow
 
 ```bash
 # 1. Connect and authenticate (once per session)
-export CIDER_API_URL=https://xxxx.ngrok-free.app
+export CIDER_API_URL=https://2bc6-50-171-72-195.ngrok-free.app
 cider google login
 cider status   # verify "Connected"
 
