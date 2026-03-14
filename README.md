@@ -245,6 +245,145 @@ This tool doesn't build housing directly. It builds the **informed, empowered co
 
 ---
 
+---
+
+## Project Idea 2: macOS Sandboxes as a Service for AI Coding Agents
+
+**Cloud macOS environments purpose-built for AI agents developing Swift/iOS apps.**
+
+Give every AI coding agent (Claude Code, Codex, Gemini CLI, Cursor) access to a Mac with Xcode — no hardware required.
+
+---
+
+### The Problem
+
+AI coding agents are transforming software development, but they hit a wall with Apple platforms:
+
+- **You need a Mac to build for Apple.** Swift compilation, Xcode projects, iOS Simulator, code signing — none of this works on Linux.
+- **Cloud macOS is painful.** AWS EC2 Mac has a 24-hour minimum ($26+), MacStadium starts at $109/mo, and none of them are designed for AI agent workflows.
+- **AI agent sandboxes don't support macOS.** E2B, Fly.io Sprites, Docker sandboxes — all Linux only. The best agent infrastructure in the world can't compile a Swift app.
+- **Xcode 26.3 added MCP support** (agentic coding built-in), but it assumes you own a Mac. If you don't, you're locked out.
+
+The result: AI agents can build Python, JavaScript, Rust, and Go apps in cloud sandboxes — but the entire Apple ecosystem (~28M developers) is excluded.
+
+---
+
+### What Exists Today
+
+| Player | What They Do | Gap |
+|---|---|---|
+| **Daytona** ($24M Series A) | AI agent sandboxes, claims macOS support | macOS is secondary; not Xcode/Swift focused |
+| **Cua** (YC-backed) | macOS VMs on Apple Silicon for AI agents | Focused on computer-use (screen control), not headless coding |
+| **E2B / Fly.io Sprites** | Best-in-class agent sandboxes | Linux only |
+| **AWS EC2 Mac** | Raw macOS VMs | $1.08/hr, 24hr min, no agent tooling, no MCP |
+| **MacStadium / Tart** | macOS VM orchestration | Built for CI/CD pipelines, not interactive agent sessions |
+| **Xcode 26.3 + MCP** | Native agentic coding in Xcode | Local only — requires owning a Mac |
+| **ClodPod / SandVault** | Local macOS sandboxes for AI agents | Local only, not cloud |
+
+**The gap: Nobody offers "API call → cloud macOS with Xcode → AI agent connects via MCP → build/test Swift → tear down" as a product.**
+
+---
+
+### The Steelman Case
+
+#### Why This Could Be Massive
+
+**1. Timing is perfect — Xcode 26.3 just created the demand.**
+Apple shipped native MCP support in Xcode (Feb 2026), legitimizing AI agent coding for iOS/macOS. 20 built-in tools exposed via MCP: file creation, building, testing, preview snapshots, documentation search. Every AI coding agent can now plug into Xcode — *if they have access to a Mac.* This service would be the missing infrastructure layer.
+
+**2. The 24-hour licensing constraint is actually a feature.**
+Apple requires 24-hour minimum leases on Mac hardware. Instead of fighting this, lean into it: offer **persistent macOS dev environments** (not ephemeral). Your AI agent gets a Mac that's always warm, with your project loaded, dependencies cached, and Xcode ready. This is actually a better developer experience than ephemeral VMs — no cold starts, no re-downloading Xcode (12GB+) every time.
+
+**3. AI agents are becoming the primary consumer of dev environments.**
+The trajectory is clear: developers increasingly supervise agents rather than write code directly. The bottleneck shifts from "developer needs a machine" to "agent needs a machine." This is the CI/CD → agent-sandbox evolution. CI/CD for Mac is a proven market (Codemagic, Bitrise, CircleCI Mac) — agent sandboxes are the next iteration.
+
+**4. Enterprise demand is real and underserved.**
+Large companies adopting AI coding agents for their iOS teams face a hardware scaling problem: you can't spin up 50 Mac minis overnight for 50 agents. A cloud API solves this instantly. Enterprise mobile teams (banking, healthcare, retail — everyone has an iOS app) would pay premium prices for this.
+
+**5. Education & accessibility.**
+Millions of students and developers worldwide want to learn Swift / build iOS apps but can't afford a Mac ($1,299+). Cloud macOS sandboxes with AI assistance would democratize Apple platform development.
+
+**6. Apple Silicon VMs are now technically viable.**
+Apple's Virtualization.framework enables near-native performance (97% CPU speed per Cua's benchmarks). Tart/Orchard have proven you can orchestrate thousands of macOS VMs. The technical foundation exists — it just hasn't been productized for AI agents.
+
+---
+
+### TAM Analysis
+
+#### Bottom-Up
+
+| Segment | Size | Willingness to Pay | Annual Value |
+|---|---|---|---|
+| **iOS/macOS developers using AI agents** | ~5M of ~28M Apple devs (early adopters) | $50-200/mo | $3B-12B |
+| **Enterprise mobile teams** (Fortune 500 iOS) | ~10,000 teams × 5-20 agent seats | $200-500/seat/mo | $120M-1.2B |
+| **CI/CD migration** (existing Mac CI users) | ~500K developers on Codemagic/Bitrise/CircleCI Mac | $100-300/mo | $600M-1.8B |
+| **Education** (CS students wanting iOS) | ~2M students globally | $10-30/mo | $240M-720M |
+| **Indie / hobbyist (no Mac owners)** | ~3M developers | $20-50/mo | $720M-1.8B |
+
+**Conservative TAM: $5B+ annually** in the cloud macOS + AI agent infrastructure market.
+
+**Serviceable market (Year 1-2):** Enterprise mobile teams + power-user AI agent developers = ~$200M-500M.
+
+#### Top-Down
+
+- Cloud dev environments market: ~$15B by 2027 (Gartner)
+- AI coding tools market: ~$12B by 2027
+- macOS/iOS share of developer ecosystem: ~20-25%
+- Overlap: $3-7B addressable
+
+#### Comparable Valuations
+
+- **Daytona** (AI agent sandboxes, Linux-focused): $24M Series A, early revenue
+- **Cua** (macOS agent infra): YC-backed, pre-revenue
+- **E2B** (Linux agent sandboxes): ~$10M raised
+- **Replit** (cloud dev environments + AI): $1.16B valuation
+
+---
+
+### Use Cases
+
+#### Primary: AI Agent Swift Development
+An AI coding agent (Claude Code, Codex, Gemini CLI) receives a task: "Build me an iOS app that tracks my workouts." The agent:
+1. Calls the API → gets a cloud Mac with Xcode
+2. Connects via MCP (Xcode 26.3 native support)
+3. Creates the project, writes Swift code, builds, runs tests
+4. Returns the built .ipa or shares a Simulator preview
+5. Environment persists for iteration
+
+#### Secondary Use Cases
+
+| Use Case | Description |
+|---|---|
+| **Enterprise fleet scaling** | Company has 200 iOS developers adopting Cursor/Claude Code. Instead of buying 200 Mac minis for agents, they use cloud Macs on-demand. |
+| **Cross-platform agent workflows** | An agent building a full-stack app uses a Linux sandbox for the backend and a macOS sandbox for the iOS frontend — same API, same workflow. |
+| **iOS CI/CD 2.0** | Replace traditional CI runners with agent-aware environments that can diagnose build failures, fix them, and retry — not just report red/green. |
+| **App Store submission automation** | Agent handles code signing, provisioning profiles, App Store Connect upload, and metadata — the most hated part of iOS development. |
+| **Swift education** | Student asks an AI tutor to "teach me SwiftUI." The tutor creates a project in a cloud Mac, makes changes, shows previews — all without the student owning a Mac. |
+| **Open source iOS contributions** | A developer on Linux wants to contribute to an iOS open source project. Agent spins up a Mac sandbox, makes the change, runs tests, submits PR. |
+| **Legacy app modernization** | Enterprise agent tasked with migrating an Objective-C app to Swift. Needs Xcode to incrementally build/test. Runs for days in a persistent sandbox. |
+
+---
+
+### Hackathon Fit Assessment
+
+#### Arguments For
+- Technically impressive if you can demo it
+- Clear market gap with real demand
+- Could use Gemini CLI as the AI agent in the demo
+- Infra products win hackathons when the demo is compelling
+
+#### Arguments Against
+- **Google/DeepMind fit is weak** — this is fundamentally an Apple ecosystem product. Hard to showcase Gemini as the star vs. just a consumer of the infra.
+- **Requires real Mac hardware** — can't fake a macOS sandbox. You'd need to bring/provision actual Macs and demo live VM orchestration.
+- **Infrastructure-heavy** — 48 hours is tight for VM orchestration + API + agent integration + demo polish.
+- **Demo risk** — live infra demos are fragile. If the VM takes 30 seconds to boot during the demo, the energy dies.
+- **Audience mismatch** — hackathon judges may not viscerally relate to "AI agent needs a Mac" the way they would to a consumer-facing product.
+
+#### Verdict
+**Strong startup idea. Weak hackathon project** — unless you pre-provision the infra and focus the hackathon time on the agent experience layer. Even then, the Google/DeepMind angle is a stretch.
+
+---
+
 ## Team
 
 *[To be filled in]*
