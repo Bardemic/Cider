@@ -246,7 +246,7 @@ func cmdStatus(cfg *config.Config) {
 
 func cmdSandboxAction(cfg *config.Config, id string) {
 	if len(os.Args) < 3 {
-		fmt.Printf("\n  %s\n\n", ui.Dimmed("Usage: cider <ID> --emulator ios | --google"))
+		fmt.Printf("\n  %s\n\n", ui.Dimmed("Usage: cider <ID> --emulator ios | --ss | --google"))
 		return
 	}
 
@@ -254,6 +254,39 @@ func cmdSandboxAction(cfg *config.Config, id string) {
 	flag := os.Args[2]
 
 	switch flag {
+	case "--ss":
+		fmt.Printf("\n  Taking screenshot of sandbox %s...\n", ui.Brand(id))
+		data, err := client.Screenshot(id)
+		if err != nil {
+			ui.Fatal(fmt.Sprintf("Failed to take screenshot: %s", err))
+		}
+
+		tmpFile, err := os.CreateTemp("", "cider-screenshot-*.png")
+		if err != nil {
+			ui.Fatal(fmt.Sprintf("Failed to create temp file: %s", err))
+		}
+		if _, err := tmpFile.Write(data); err != nil {
+			tmpFile.Close()
+			ui.Fatal(fmt.Sprintf("Failed to write screenshot: %s", err))
+		}
+		tmpFile.Close()
+
+		ui.Done(fmt.Sprintf("Screenshot saved to %s", tmpFile.Name()))
+
+		var openCmd *exec.Cmd
+		switch runtime.GOOS {
+		case "darwin":
+			openCmd = exec.Command("open", tmpFile.Name())
+		case "windows":
+			openCmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", tmpFile.Name())
+		default:
+			openCmd = exec.Command("xdg-open", tmpFile.Name())
+		}
+		if err := openCmd.Start(); err != nil {
+			fmt.Printf("  %s\n\n", ui.Dimmed("Could not open image viewer. Open the file manually."))
+		}
+		fmt.Println()
+
 	case "--emulator":
 		device := "iPhone 16"
 		if len(os.Args) >= 4 && os.Args[3] != "" {
@@ -311,7 +344,7 @@ func cmdSandboxAction(cfg *config.Config, id string) {
 
 	default:
 		fmt.Printf("  Unknown flag: %s\n", flag)
-		fmt.Printf("  %s\n\n", ui.Dimmed("Usage: cider <ID> --emulator ios | --google"))
+		fmt.Printf("  %s\n\n", ui.Dimmed("Usage: cider <ID> --emulator ios | --ss | --google"))
 	}
 }
 
@@ -326,6 +359,7 @@ func printUsage() {
 	fmt.Println("    cider login                        Open dashboard login in browser")
 	fmt.Println("    cider google login                 Authenticate with Gemini API key")
 	fmt.Println("    cider <ID> --emulator ios           Boot iOS simulator in sandbox")
+	fmt.Println("    cider <ID> --ss                     Take a screenshot of the simulator")
 	fmt.Println("    cider <ID> --google                 Start Gemini agent session")
 	fmt.Println("    cider stop <ID>                    Stop and delete a sandbox")
 	fmt.Println()

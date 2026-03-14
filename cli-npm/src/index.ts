@@ -83,6 +83,7 @@ async function cmdCreate() {
     console.log();
     console.log(`  ${ui.dim("Next steps:")}`);
     console.log(`  ${ui.dim(`  cider ${sandbox.id} --emulator ios    # boot iOS simulator`)}`);
+    console.log(`  ${ui.dim(`  cider ${sandbox.id} --ss              # take a screenshot`)}`);
     console.log(`  ${ui.dim(`  cider ${sandbox.id} --google          # start Gemini agent`)}`);
     console.log(`  ${ui.dim(`  cider stop ${sandbox.id}              # stop and delete`)}`);
     console.log();
@@ -219,7 +220,7 @@ async function cmdStatus() {
 
 async function cmdSandboxAction(id: string) {
   if (args.length < 2) {
-    console.log(`\n  ${ui.dim("Usage: cider <ID> --emulator ios | --google")}\n`);
+    console.log(`\n  ${ui.dim("Usage: cider <ID> --emulator ios | --ss | --google")}\n`);
     return;
   }
 
@@ -227,6 +228,34 @@ async function cmdSandboxAction(id: string) {
   const flag = args[1];
 
   switch (flag) {
+    case "--ss": {
+      console.log(`\n  Taking screenshot of sandbox ${ui.brand(id)}...`);
+
+      try {
+        const data = await client.screenshot(id);
+        const { writeFileSync } = await import("node:fs");
+        const { tmpdir } = await import("node:os");
+        const { join } = await import("node:path");
+        const { exec } = await import("node:child_process");
+
+        const tmpPath = join(tmpdir(), `cider-screenshot-${Date.now()}.png`);
+        writeFileSync(tmpPath, data);
+        ui.done(`Screenshot saved to ${tmpPath}`);
+
+        const openCmd =
+          process.platform === "darwin" ? `open "${tmpPath}"` :
+          process.platform === "win32" ? `rundll32 url.dll,FileProtocolHandler "${tmpPath}"` :
+          `xdg-open "${tmpPath}"`;
+        exec(openCmd, (err) => {
+          if (err) console.log(`  ${ui.dim("Could not open image viewer. Open the file manually.")}`);
+        });
+      } catch (err) {
+        ui.fatal(`Failed to take screenshot: ${err instanceof Error ? err.message : err}`);
+      }
+      console.log();
+      break;
+    }
+
     case "--emulator": {
       let device = "iPhone 16";
       if (args[2] && args[2] !== "ios") device = args[2];
@@ -279,7 +308,7 @@ async function cmdSandboxAction(id: string) {
 
     default:
       console.log(`  Unknown flag: ${flag}`);
-      console.log(`  ${ui.dim("Usage: cider <ID> --emulator ios | --google")}\n`);
+      console.log(`  ${ui.dim("Usage: cider <ID> --emulator ios | --ss | --google")}\n`);
   }
 }
 
@@ -293,6 +322,7 @@ function printUsage() {
   console.log("    cider login                        Open dashboard login in browser");
   console.log("    cider google login                 Authenticate with Gemini API key");
   console.log("    cider <ID> --emulator ios           Boot iOS simulator in sandbox");
+  console.log("    cider <ID> --ss                     Take a screenshot of the simulator");
   console.log("    cider <ID> --google                 Start Gemini agent session");
   console.log("    cider stop <ID>                    Stop and delete a sandbox");
   console.log();
