@@ -9,7 +9,7 @@ const bodyFont = Public_Sans({
 
 export const metadata: Metadata = {
   title: "Cider",
-  description: "Simple frontend for Cider sandbox creation, auth, and dashboard data.",
+  description: "Landing page for Cider macOS sandboxes and remote iOS builds.",
 };
 
 export default function RootLayout({
