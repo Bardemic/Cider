@@ -79,6 +79,56 @@ You bring a terminal and an idea. Cider handles the rest.
 
 ---
 
+## What a Cider Sandbox Is
+
+A Cider sandbox is a complete, isolated macOS development environment — spun up on demand, used through a CLI, and destroyed when you're done. No remote desktop. No VM management. No macOS knowledge required.
+
+**What's inside each sandbox:**
+- macOS with Xcode 16 (Swift compiler, Interface Builder, full iOS SDK)
+- iOS Simulator (iPhone 16) for running and testing apps
+- The `xcodebuild` toolchain for compiling SwiftUI projects
+- `xcrun simctl` for simulator management (boot, install, launch, screenshot)
+- A SwiftUI project template ready to build on
+
+**What you don't deal with:**
+- No Apple ID sign-in
+- No Xcode download (40GB+)
+- No provisioning profiles or code signing
+- No simulator configuration
+- No disk space management
+- No "which macOS version do I need"
+
+Each sandbox is a Tart VM cloned from a pre-configured base image. When you run `cider create`, Cider clones the image, boots the VM, waits for it to be ready, and gives you a sandbox ID. Every command you run after that — writing files, compiling code, booting the simulator, taking screenshots — executes inside that isolated VM. When you're done, `cider stop` deletes it completely.
+
+### The pain points Cider eliminates
+
+| Without Cider | With Cider |
+|---|---|
+| Buy a Mac ($600-$1,300+) | `cider create` (free, instant) |
+| Download Xcode (40GB, 30+ min) | Already installed in the sandbox |
+| Learn Swift and SwiftUI | Gemini agent writes the code for you |
+| Learn xcodebuild CLI or Xcode IDE | Agent runs build commands autonomously |
+| Debug cryptic compiler errors | Agent reads errors, fixes code, rebuilds |
+| Figure out simulator setup | `cider <ID> --emulator ios` — one command |
+| Manage provisioning profiles | Not needed for simulator builds |
+| Deal with macOS updates breaking Xcode | Sandbox image is pinned and tested |
+| Xcode eats 40GB+ of your disk | Runs on remote Mac, not your machine |
+| "It works on my machine" environment issues | Every sandbox is identical |
+
+### Who this is for
+
+**Developers without a Mac.** 31 million developers worldwide use Windows or Linux professionally. They can write iOS code with AI tools, but can't compile it. Cider gives them the missing piece.
+
+**AI coding agents.** Cursor, Claude Code, Copilot, and custom agents can write entire iOS apps — but they need somewhere to build and test them. Cider's sandbox API is the compilation backend for any AI agent that wants to ship to the App Store.
+
+**Students and bootcamps.** Learning iOS development shouldn't require a $1,300 laptop. Cider lets anyone with a browser and a terminal build their first iPhone app.
+
+**Freelancers and agencies.** Need to spin up an iOS build environment for a client project? `cider create --repo <url>`. Done in 60 seconds. No hardware procurement, no IT tickets.
+
+**Hackathon teams.** One teammate has a Mac, the rest don't. Cider turns that one Mac into a shared build server everyone can use from their own laptops.
+
+---
+
 ## How It Works
 
 Cider has two interfaces: a **CLI** (the primary product) and a **web dashboard** (the companion). The CLI is what developers and AI agents use. The dashboard is what you look at.
