@@ -44,13 +44,32 @@ export default function Home() {
             Spin up a macOS sandbox, build and run iOS apps in a remote simulator,
             and ship without needing a Mac on your desk.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-5 inline-flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5">
+            <span className="mono-inline text-base">npm i -g cider-cli</span>
+          </div>
+          <div className="mt-6 flex flex-wrap gap-3">
             <Link href="/login" className="button-primary">
               Open login surface
             </Link>
             <Link href="/dashboard" className="button-secondary">
               View dashboard
             </Link>
+          </div>
+
+          {/* "Sponsored" badge */}
+          <div className="mt-6">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-5 py-2.5 opacity-80 hover:opacity-100 transition-opacity">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
+                <path d="M12 2L8.5 8.5 2 12l6.5 3.5L12 22l3.5-6.5L22 12l-6.5-3.5z" fill="#4285F4"/>
+                <path d="M12 2L8.5 8.5 2 12l6.5 3.5L12 22" fill="#34A853"/>
+                <path d="M12 2l3.5 6.5L22 12l-6.5 3.5L12 22" fill="#FBBC04"/>
+                <path d="M12 7l-2.5 5L12 17l2.5-5z" fill="#EA4335"/>
+              </svg>
+              <span className="text-sm font-medium tracking-wide">
+                <span style={{ fontSize: '3px', verticalAlign: 'super' }}>not </span>
+                Sponsored by Gemini
+              </span>
+            </div>
           </div>
 
           <div className="mt-12 max-w-xl border-t border-[var(--border)] pt-6">
@@ -131,21 +150,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* "Sponsored" badge */}
-      <div className="mt-20 flex justify-center pb-10">
-        <div className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-5 py-2.5 opacity-80 hover:opacity-100 transition-opacity">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
-            <path d="M12 2L8.5 8.5 2 12l6.5 3.5L12 22l3.5-6.5L22 12l-6.5-3.5z" fill="#4285F4"/>
-            <path d="M12 2L8.5 8.5 2 12l6.5 3.5L12 22" fill="#34A853"/>
-            <path d="M12 2l3.5 6.5L22 12l-6.5 3.5L12 22" fill="#FBBC04"/>
-            <path d="M12 7l-2.5 5L12 17l2.5-5z" fill="#EA4335"/>
-          </svg>
-          <span className="text-sm font-medium tracking-wide">
-            <span style={{ fontSize: '3px', verticalAlign: 'super' }}>not </span>
-            Sponsored by Gemini
-          </span>
-        </div>
-      </div>
     </main>
   );
 }
