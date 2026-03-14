@@ -3,11 +3,12 @@ import subprocess
 import shutil
 import platform
 from pathlib import Path
+from typing import Optional
 
 from config import PROJECT_ROOT, TEMPLATE_PROJECT, EXEC_TIMEOUT, SIMULATOR_DEVICE
 
 
-async def run_command(command: str, cwd: str | None = None) -> dict:
+async def run_command(command: str, cwd: Optional[str] = None) -> dict:
     """Execute a shell command and return stdout/stderr/exit_code."""
     work_dir = cwd or str(PROJECT_ROOT)
     try:
@@ -30,7 +31,7 @@ async def run_command(command: str, cwd: str | None = None) -> dict:
         return {"stdout": "", "stderr": str(e), "exit_code": -1}
 
 
-async def stream_command(command: str, cwd: str | None = None):
+async def stream_command(command: str, cwd: Optional[str] = None):
     """Yield stdout/stderr lines as they arrive. Used by WebSocket."""
     work_dir = cwd or str(PROJECT_ROOT)
     proc = await asyncio.create_subprocess_shell(
@@ -126,7 +127,7 @@ def make_directory(path: str) -> dict:
     return {"path": str(full_path)}
 
 
-async def take_screenshot() -> bytes | None:
+async def take_screenshot() -> Optional[bytes]:
     """Capture the booted iOS Simulator screen, return PNG bytes."""
     import tempfile
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
@@ -139,7 +140,7 @@ async def take_screenshot() -> bytes | None:
     return data
 
 
-async def boot_simulator(device_name: str | None = None) -> dict:
+async def boot_simulator(device_name: Optional[str] = None) -> dict:
     """Boot an iOS Simulator device."""
     name = device_name or SIMULATOR_DEVICE
     # Find device UDID

@@ -4,6 +4,7 @@ Cider VM Server — runs inside each Tart VM sandbox.
 Start with: uvicorn vm_server:app --host 0.0.0.0 --port 8000
 """
 import json
+from typing import Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -17,7 +18,7 @@ app = FastAPI(title="Cider Sandbox", version="0.1.0")
 
 class ExecRequest(BaseModel):
     command: str
-    cwd: str | None = None
+    cwd: Optional[str] = None
 
 class FileWriteRequest(BaseModel):
     path: str
@@ -34,7 +35,7 @@ class MkdirRequest(BaseModel):
     path: str
 
 class BootSimulatorRequest(BaseModel):
-    device_name: str | None = None
+    device_name: Optional[str] = None
 
 class CreateProjectRequest(BaseModel):
     name: str
