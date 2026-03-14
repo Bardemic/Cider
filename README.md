@@ -273,99 +273,55 @@ Each `cider create` clones a Tart VM from a pre-configured base image (macOS + X
 | Windows laptop | Client — runs CLI + dashboard | Go, Node.js, Tailscale |
 | MacBook | Host — runs Tart VMs | Tart, Python 3.11+, Tailscale, base image ready |
 
-### Night-Before Checklist (Mac host)
+### Pre-Demo Setup
 
-Run through these the night before. Do not skip any.
+Do these in order. Total time: ~15 minutes.
+
+#### Mac host (~10 min)
 
 ```bash
-# 1. Verify Tart is installed and the base image exists
+# 1. Verify Tart base image exists
 tart list
-# Should show "cider-base" in the list
+# Should show "cider-base"
 
-# 2. Test-clone the base image to confirm it works
-tart clone cider-base cider-test
-tart run cider-test --no-graphics &
-sleep 30
-tart ip cider-test
-# Should print an IP like 192.168.64.X
-
-# 3. Verify the sandbox server auto-starts inside the VM
-curl http://$(tart ip cider-test):8000/status
-# Should return JSON with macos_version, xcode, etc.
-
-# 4. Verify xcodebuild works inside the VM
-curl -X POST http://$(tart ip cider-test):8000/exec \
-  -H "Content-Type: application/json" \
-  -d '{"command": "xcodebuild -version"}'
-# Should return Xcode version in stdout
-
-# 5. Clean up the test VM
-tart stop cider-test
-tart delete cider-test
-
-# 6. Start the host server and verify it works
+# 2. Start the host server
 cd server
 pip install -r requirements.txt
 uvicorn main:app --host 0.0.0.0 --port 8000 &
 
+# 3. Test sandbox lifecycle end-to-end
 curl -X POST http://localhost:8000/sandboxes
-# Should clone, boot a VM, and return sandbox JSON with status "running"
-# Note the sandbox ID from the response
+# Should return sandbox JSON with status "running" — note the ID
 
-curl http://localhost:8000/sandboxes
-# Should list the sandbox you just created
+curl -X POST http://localhost:8000/sandboxes/<ID>/exec \
+  -H "Content-Type: application/json" \
+  -d '{"command": "xcodebuild -version"}'
+# Should return Xcode version — this proves the full pipeline works
 
-curl -X DELETE http://localhost:8000/sandboxes/<ID-from-above>
-# Should stop and delete the VM
+curl -X DELETE http://localhost:8000/sandboxes/<ID>
+# Clean up
 
-# 7. Verify Tailscale connectivity
+# 4. Note your Tailscale IP
 tailscale ip -4
-# Note this IP — the Windows laptop will use it
 ```
 
-### Night-Before Checklist (Windows client)
+#### Windows client (~5 min)
 
 ```bash
-# 1. Build the CLI
-cd cli
-go build -o cider.exe .
-
-# 2. Set the host URL (Tailscale IP of the Mac)
+# 1. Build CLI + set host URL
+cd cli && go build -o cider.exe .
 export CIDER_API_URL=http://<mac-tailscale-ip>:8000
 
-# 3. Verify connectivity
+# 2. Verify connectivity
 ./cider.exe status
-# Should show "Connected" with sandbox count
+# Should show "Connected"
 
-# 4. Store Gemini API key
+# 3. Save Gemini key
 ./cider.exe google login
-# Paste your key, should validate successfully
 
-# 5. Full end-to-end dry run
+# 4. Pre-create a sandbox (safety net — use this if live create is slow)
 ./cider.exe create
-# Wait for "Sandbox ready", note the ID
-
-./cider.exe list
-# Should show the sandbox with status "running"
-
-./cider.exe <ID> --emulator ios
-# Should boot iPhone 16
-
-./cider.exe <ID> --google
-> Build a SwiftUI app that shows "Hello Cider" in large blue text
-# Watch the agent work — should complete in ~2-3 minutes
-# Type "exit" when done
-
-./cider.exe stop <ID>
-# Should clean up
-
-# 6. If using the dashboard
-cd client
-npm install
-echo 'SANDBOX_URL=http://<mac-tailscale-ip>:8000' > .env.local
-echo 'GEMINI_API_KEY=<your-key>' >> .env.local
-npm run dev
-# Open http://localhost:3000, verify green connection dot
+# Note the ID. Leave it running as your fallback.
 ```
 
 ### Demo Script (5-7 minutes)
