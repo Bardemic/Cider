@@ -52,7 +52,7 @@ export default function Home() {
                 <path d="M12 7l-2.5 5L12 17l2.5-5z" fill="#EA4335"/>
               </svg>
               <span className="text-sm font-medium tracking-wide">
-                <span style={{ fontSize: '3px', verticalAlign: 'super' }}>not </span>
+                <span style={{ fontSize: '6px', verticalAlign: 'super' }}>not </span>
                 Sponsored by Gemini
               </span>
             </div>

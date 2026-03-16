@@ -530,6 +530,32 @@ Run through this right before presenting. Every line should pass.
 | Fallback sandbox running | `./cider.exe list` | Shows 1 sandbox, status "running" |
 | Sandbox responds | `./cider.exe <fallback-ID> --emulator ios` | "iPhone 16 booted" or "already running" |
 
+### Live Demo Commands (quick reference)
+
+```bash
+# 1. Create sandbox from an existing SwiftUI repo
+cider create --repo https://github.com/nalexn/clean-architecture-swiftui
+
+# 2. Boot the iOS simulator
+cider <ID> --emulator ios
+
+# 3. Open the dashboard UI (takes a moment to load)
+cider <ID> --ui
+
+# 4. (New terminal tab while UI loads) Authenticate with Gemini
+cider google login
+# Enter your API key from https://aistudio.google.com/apikey
+
+# 5. (Once the UI is open) Build and run the cloned app
+cider <ID> --run
+
+# 6. Show the running app in the simulator, then modify it with the agent
+cider <ID> --google
+> you are in a codebase (don't make an xcode proj.) make the bg red
+
+# 7. Once the agent finishes, show the UI — the app background is now red
+```
+
 ### Demo Script (5-7 minutes)
 
 **Before going on stage:**
