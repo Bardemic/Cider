@@ -145,6 +145,8 @@ cider status                         Check host server connection
 cider login                          Open dashboard login in browser
 cider google login                   Authenticate with Gemini API key
 cider <ID> --emulator ios            Boot iOS simulator in sandbox
+cider <ID> --run                     Build and run the app in the simulator
+cider <ID> --ui                      Open the live dashboard for this sandbox
 cider <ID> --google                  Start Gemini agent session
 cider stop <ID>                      Stop and delete a sandbox
 ```
@@ -530,31 +532,62 @@ Run through this right before presenting. Every line should pass.
 | Fallback sandbox running | `./cider.exe list` | Shows 1 sandbox, status "running" |
 | Sandbox responds | `./cider.exe <fallback-ID> --emulator ios` | "iPhone 16 booted" or "already running" |
 
-### Live Demo Commands (quick reference)
+### Live Demo Script
+
+This demo clones a real-world SwiftUI app ([Clean Architecture for SwiftUI](https://github.com/nalexn/clean-architecture-swiftui)) into a sandbox, builds and runs it, then uses the Gemini agent to modify it live.
+
+**Before you start:** Make sure `CIDER_API_URL` is set and `cider status` shows "Connected".
+
+#### Step 1 — Create a sandbox from an existing repo
 
 ```bash
-# 1. Create sandbox from an existing SwiftUI repo
 cider create --repo https://github.com/nalexn/clean-architecture-swiftui
-
-# 2. Boot the iOS simulator
-cider <ID> --emulator ios
-
-# 3. Open the dashboard UI (takes a moment to load)
-cider <ID> --ui
-
-# 4. (New terminal tab while UI loads) Authenticate with Gemini
-cider google login
-# Enter your API key from https://aistudio.google.com/apikey
-
-# 5. (Once the UI is open) Build and run the cloned app
-cider <ID> --run
-
-# 6. Show the running app in the simulator, then modify it with the agent
-cider <ID> --google
-> you are in a codebase (don't make an xcode proj.) make the bg red
-
-# 7. Once the agent finishes, show the UI — the app background is now red
+# Returns a sandbox ID like sbx-a1b2c3d4 — use this for all subsequent commands
 ```
+
+#### Step 2 — Boot the iOS simulator
+
+```bash
+cider sbx-a1b2c3d4 --emulator ios
+```
+
+#### Step 3 — Open the dashboard
+
+```bash
+cider sbx-a1b2c3d4 --ui
+```
+
+The dashboard takes a few seconds to load. **While it's loading, open a new terminal tab** for the next step.
+
+#### Step 4 — Authenticate with Gemini (new terminal tab)
+
+```bash
+cider google login
+# Paste your API key from https://aistudio.google.com/apikey
+```
+
+#### Step 5 — Build and run the cloned app
+
+Switch back to the first terminal. Once the dashboard UI is open:
+
+```bash
+cider sbx-a1b2c3d4 --run
+```
+
+Show the audience the app running in the simulator via the dashboard.
+
+#### Step 6 — Modify the app with the Gemini agent
+
+```bash
+cider sbx-a1b2c3d4 --google
+> Make the background red. This is an existing codebase — do not create a new Xcode project.
+```
+
+The agent will find the relevant SwiftUI views, edit them, rebuild, and redeploy. Once it finishes, the dashboard shows the app with a red background.
+
+#### Step 7 — Show the result
+
+Point to the dashboard — the app background is now red. The agent modified a real codebase, compiled it with Xcode, and deployed it to the simulator. All from a Windows laptop.
 
 ### Demo Script (5-7 minutes)
 
