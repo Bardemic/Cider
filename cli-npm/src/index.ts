@@ -5,6 +5,7 @@ import { loadConfig, saveConfig } from "./config.js";
 import { ApiClient } from "./api.js";
 import { ui } from "./ui.js";
 import { runAgent } from "./agent.js";
+import { launchSimulatorUi } from "./simulator-ui-launcher.js";
 
 const args = process.argv.slice(2);
 const cmd = args[0];
@@ -220,7 +221,7 @@ async function cmdStatus() {
 
 async function cmdSandboxAction(id: string) {
   if (args.length < 2) {
-    console.log(`\n  ${ui.dim("Usage: cider <ID> --emulator ios | --ss | --google")}\n`);
+    console.log(`\n  ${ui.dim("Usage: cider <ID> --emulator ios | --ss | --google | --ui | --run")}\n`);
     return;
   }
 
@@ -257,14 +258,15 @@ async function cmdSandboxAction(id: string) {
     }
 
     case "--emulator": {
-      let device = "iPhone 16";
+      let device = "iPhone 17";
       if (args[2] && args[2] !== "ios") device = args[2];
 
       console.log(`\n  Booting ${device} in sandbox ${ui.brand(id)}...`);
 
       try {
         const result = await client.bootSimulator(id, device);
-        if (result.status === "already_booted") ui.done(`${device} already running`);
+        if (result.error) ui.fatal(`Failed to boot simulator: ${result.error}`);
+        else if (result.status === "already_booted") ui.done(`${device} already running`);
         else ui.done(`${device} booted`);
       } catch (err) {
         ui.fatal(`Failed to boot simulator: ${err instanceof Error ? err.message : err}`);
@@ -306,9 +308,44 @@ async function cmdSandboxAction(id: string) {
       }
     }
 
+    case "--ui": {
+      console.log(`\n  Launching simulator UI for sandbox ${ui.brand(id)}...`);
+
+      try {
+        await launchSimulatorUi(cfg.apiUrl, id);
+      } catch (err) {
+        ui.fatal(`Failed to launch simulator UI: ${err instanceof Error ? err.message : err}`);
+      }
+      console.log();
+      break;
+    }
+
+    case "--run": {
+      const projectDir = args[2] || "project";
+      const scheme = args[3];
+      console.log(`\n  Building and running ${ui.brand(projectDir)} in sandbox ${ui.brand(id)}...\n`);
+      try {
+        for await (const event of client.streamAppRun(id, projectDir, scheme)) {
+          if (event.type === "stdout") {
+            console.log(`  ${ui.dim(event.data ?? "")}`);
+          } else if (event.type === "error") {
+            console.log(`  ${ui.error("✗")} ${event.data}`);
+          } else if (event.type === "exit") {
+            if (event.code === 0) {
+              ui.done("App launched");
+            }
+          }
+        }
+      } catch (err) {
+        ui.fatal(`Build failed: ${err instanceof Error ? err.message : err}`);
+      }
+      console.log();
+      break;
+    }
+
     default:
       console.log(`  Unknown flag: ${flag}`);
-      console.log(`  ${ui.dim("Usage: cider <ID> --emulator ios | --ss | --google")}\n`);
+      console.log(`  ${ui.dim("Usage: cider <ID> --emulator ios | --ss | --google | --ui | --run")}\n`);
   }
 }
 
@@ -324,6 +361,8 @@ function printUsage() {
   console.log("    cider <ID> --emulator ios           Boot iOS simulator in sandbox");
   console.log("    cider <ID> --ss                     Take a screenshot of the simulator");
   console.log("    cider <ID> --google                 Start Gemini agent session");
+  console.log("    cider <ID> --ui                     Launch simulator control UI");
+  console.log("    cider <ID> --run                    Build and run app in simulator");
   console.log("    cider stop <ID>                    Stop and delete a sandbox");
   console.log();
 }

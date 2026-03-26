@@ -1,8 +1,8 @@
 import { ApiClient } from "./api.js";
 import { ui } from "./ui.js";
 
-const GEMINI_MODEL = "gemini-2.5-pro-preview-05-06";
-const MAX_ITERATIONS = 20;
+const GEMINI_MODEL = "gemini-3-flash-preview";
+const MAX_ITERATIONS = 128;
 
 const SYSTEM_PROMPT = `You are Cider, an AI agent that builds iOS apps using Xcode on a remote macOS sandbox.
 

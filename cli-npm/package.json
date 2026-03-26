@@ -1,6 +1,6 @@
 {
   "name": "cider-cli",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Brew iOS apps in the cloud — macOS sandboxes for AI agents",
   "type": "module",
   "author": "Bardemic",
@@ -13,8 +13,8 @@
     "cider": "dist/index.js"
   },
   "scripts": {
-    "build": "tsc",
-    "prepublishOnly": "tsc"
+    "build": "tsc && node scripts/copy-electron-assets.mjs",
+    "prepublishOnly": "npm run build"
   },
   "files": [
     "dist"
@@ -29,7 +29,9 @@
     "cli"
   ],
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+    "electron": "^41.0.2"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.9.0"

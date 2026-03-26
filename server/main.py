@@ -18,6 +18,8 @@ from pydantic import BaseModel
 import db
 import tart
 import proxy
+import pool
+from config import WARM_POOL_SIZE
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 logger = logging.getLogger("cider.host")
@@ -27,7 +29,10 @@ logger = logging.getLogger("cider.host")
 async def lifespan(app: FastAPI):
     db.init_db()
     logger.info("Database initialized")
+    pool.start(WARM_POOL_SIZE)
     yield
+    await pool.stop()
+    await tart.cleanup_all()
     await proxy.close()
     logger.info("Shutting down")
 
@@ -95,16 +100,18 @@ async def _get_sandbox_ip(sandbox_id: str) -> str:
 @app.post("/sandboxes")
 async def create_sandbox(req: CreateSandboxRequest):
     sandbox_id = _generate_sandbox_id()
-    vm_name = f"cider-{sandbox_id}"
 
-    # Insert into DB as 'creating'
-    db.create_sandbox(sandbox_id, vm_name)
-    logger.info(f"Creating sandbox {sandbox_id} (VM: {vm_name})")
+    # Insert into DB as 'creating' with a placeholder vm_name; updated after pool acquire
+    db.create_sandbox(sandbox_id, f"cider-{sandbox_id}")
+    logger.info(f"Creating sandbox {sandbox_id}")
 
     try:
-        # Clone, boot, wait for IP + server
-        ip = await tart.create_vm(sandbox_id)
-        db.update_sandbox(sandbox_id, ip=ip, status="running")
+        # Grab a pre-warmed VM (or create one on-demand if pool is empty)
+        warm = await pool.acquire()
+        vm_name = warm["vm_name"]
+        ip = warm["ip"]
+        db.update_sandbox(sandbox_id, ip=ip, status="running", vm_name=vm_name)
+        logger.info(f"Sandbox {sandbox_id} assigned warm VM {vm_name} ({ip})")
 
         # If repo URL provided, clone it inside the VM
         if req.repo:
@@ -205,6 +212,32 @@ async def sandbox_files_mkdir(sandbox_id: str, req: MkdirRequest):
 async def sandbox_screenshot(sandbox_id: str):
     ip = await _get_sandbox_ip(sandbox_id)
     return await proxy.proxy_get(ip, "/screenshot")
+
+
+@app.websocket("/sandboxes/{sandbox_id}/ws/video")
+async def sandbox_ws_video(websocket: WebSocket, sandbox_id: str):
+    try:
+        ip = await _get_sandbox_ip(sandbox_id)
+    except HTTPException as e:
+        await websocket.close(code=1008, reason=e.detail)
+        return
+    await websocket.accept()
+    await proxy.proxy_websocket(websocket, ip, "/ws/video")
+
+
+@app.get("/sandboxes/{sandbox_id}/app/detect")
+async def sandbox_app_detect(sandbox_id: str, project_dir: str = "project"):
+    ip = await _get_sandbox_ip(sandbox_id)
+    return await proxy.proxy_get(ip, f"/app/detect?project_dir={project_dir}")
+
+
+@app.get("/sandboxes/{sandbox_id}/app/run")
+async def sandbox_app_run(sandbox_id: str, project_dir: str = "project", scheme: str | None = None):
+    ip = await _get_sandbox_ip(sandbox_id)
+    path = f"/app/run?project_dir={project_dir}"
+    if scheme:
+        path += f"&scheme={scheme}"
+    return await proxy.proxy_stream_get(ip, path, "text/event-stream")
 
 
 @app.post("/sandboxes/{sandbox_id}/simulator/boot")

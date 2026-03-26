@@ -3,7 +3,7 @@
  * Runs server-side in the API route. Streams AgentEvents via callback.
  */
 
-const GEMINI_MODEL = "gemini-2.5-pro-preview-05-06";
+const GEMINI_MODEL = "gemini-3-flash-preview";
 const MAX_ITERATIONS = 20;
 
 const SANDBOX_URL = process.env.SANDBOX_URL!;

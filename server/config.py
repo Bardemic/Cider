@@ -11,7 +11,7 @@ TEMPLATE_PROJECT = Path(os.environ.get("CIDER_TEMPLATE_PATH", Path.home() / "Cid
 EXEC_TIMEOUT = int(os.environ.get("CIDER_EXEC_TIMEOUT", "120"))
 
 # Simulator device name
-SIMULATOR_DEVICE = os.environ.get("CIDER_SIMULATOR_DEVICE", "iPhone 16")
+SIMULATOR_DEVICE = os.environ.get("CIDER_SIMULATOR_DEVICE", "iPhone 17")
 
 # Server host/port
 HOST = os.environ.get("CIDER_HOST", "0.0.0.0")

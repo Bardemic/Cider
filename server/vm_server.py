@@ -6,7 +6,7 @@ Start with: uvicorn vm_server:app --host 0.0.0.0 --port 8000
 import json
 from typing import Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 import sandbox
@@ -78,7 +78,58 @@ async def screenshot():
     data = await sandbox.take_screenshot()
     if data is None:
         return {"error": "Failed to capture screenshot. Is a simulator booted?"}
-    return Response(content=data, media_type="image/png")
+    return Response(content=data, media_type="image/jpeg")
+
+
+@app.websocket("/ws/video")
+async def ws_video(websocket: WebSocket):
+    status = await sandbox.get_system_status()
+    sims = status.get("booted_simulators", [])
+    if not sims:
+        await websocket.close(code=1008, reason="No booted simulator")
+        return
+    udid = sims[0]["udid"]
+    await websocket.accept()
+    try:
+        async for frame in sandbox.stream_frames_ws(udid):
+            await websocket.send_json(frame)
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        pass
+
+
+@app.get("/app/detect")
+async def app_detect(project_dir: str = "project"):
+    return await sandbox.detect_app(project_dir)
+
+
+@app.get("/app/run")
+async def app_run(project_dir: str = "project", scheme: Optional[str] = None):
+    import json as _json
+
+    async def error_stream(msg: str):
+        yield f'data: {_json.dumps({"type": "error", "data": msg})}\n\n'
+
+    try:
+        status = await sandbox.get_system_status()
+    except Exception as e:
+        return StreamingResponse(error_stream(f"Status error: {e}"), media_type="text/event-stream")
+
+    sims = status.get("booted_simulators", [])
+    if not sims:
+        return StreamingResponse(error_stream("No booted simulator"), media_type="text/event-stream")
+
+    udid = sims[0]["udid"]
+
+    async def generate():
+        try:
+            async for event in sandbox.build_and_run_app(udid, project_dir, scheme):
+                yield f"data: {_json.dumps(event)}\n\n"
+        except Exception as e:
+            yield f"data: {_json.dumps({'type': 'error', 'data': str(e)})}\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
 
 
 @app.post("/simulator/boot")
